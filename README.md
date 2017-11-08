@@ -3,8 +3,8 @@
 Forked by Nelson Ramirez and Luis Perez-Bustos
 -----------------------------------------------------------
 ```
-- Module T2 (Sytèmes Temps-Réel et Sûreté de Fonctionnement)
 - Université Paris-Saclay
+- Module T2 (Sytèmes Temps-Réel et Sûreté de Fonctionnement)
 - M2 Systèmes Embarqués et Traitement de l'Information
 ```
 -----------------------------------------------------------
