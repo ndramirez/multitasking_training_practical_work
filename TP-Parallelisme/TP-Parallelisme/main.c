@@ -10,6 +10,8 @@
 #include </usr/include/semaphore.h>
 #include <unistd.h> // sleep function
 
+#include "msg.h"
+
 #define BUFF_SIZE   4           /* total number of slots */
 #define NP          4           /* total number of producers */
 #define NC          1           /* total number of consumers */
@@ -28,11 +30,11 @@ sbuf_t shared;
 
 void *Producer(void *arg)
 {
-    int item, index, currentIn;
-    MSG_BLOCK item = (MSG_BLOCK)arg;
+    int index, currentIn;
+    MSG_BLOCK item;
+    thread_id = (pthread_t)arg;
 
-    index = (int)arg;
-
+    MessageFill(&item, pthread_t threadId)
 
     for (i=0; i < NITERS; i++)
     {
@@ -102,12 +104,12 @@ int main()
     pthread_mutex_init(&shared.mutex, NULL);
      for (index = 0; index < NP; index++)
      {
-          pthread_create(&idP, NULL, Producer, (void*)index);
+          pthread_create(&idP, NULL, Producer, (void*)idP);
      }
     /*create a new Consumer*/
      for(index=0; index<NC; index++)
      {
-         pthread_create(&idC, NULL, Consumer, (void*)index);
+         pthread_create(&idC, NULL, Consumer, (void*)idC);
      }
 
     pthread_exit(NULL);
