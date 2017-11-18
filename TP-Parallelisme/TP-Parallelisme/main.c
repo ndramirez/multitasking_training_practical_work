@@ -23,7 +23,11 @@ int main()
 
     shared.full = sem_open("full", O_CREAT, 0644, 0);           /* keep track of the number of full spots */
     shared.empty = sem_open("empty", O_CREAT, 0644, BUFF_SIZE);           /* keep track of the number of full spots */
+    int errno = 0;
+    if (shared.empty == SEM_FAILED) {
+        printf("value of error: %d \n", errno);
 
+    }
     // sem_init(&shared.full, 0, 0);
     // sem_init(&shared.empty, 0, BUFF_SIZE);
     // sem_init(&s, 0, 10);

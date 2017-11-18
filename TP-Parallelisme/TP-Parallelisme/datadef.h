@@ -1,5 +1,11 @@
 #include <stdio.h>
+#ifdef __APPLE__
 #include <semaphore.h>
+#else
+#ifdef __linux__
+#include </usr/include/semaphore.h>
+#endif
+#endif
 #include <pthread.h>
 #define BUFF_SIZE   5           /* total number of slots */
 
