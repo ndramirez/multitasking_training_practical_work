@@ -110,7 +110,7 @@ int main()
 
     sem_init(&shared.full, 0, 0);
     sem_init(&shared.empty, 0, BUFF_SIZE);
-    sem_init(s, 0, 10);
+    sem_init(&s, 0, 10);
     int res = sem_getvalue(&s, &semValue);
     printf("Result of GetValue(empty): %d \n", res);
     printf("value of empty: %d \n", semValue);
