@@ -25,7 +25,10 @@ typedef struct
     int in;               /* buf[in%BUFF_SIZE] is the first empty slot */
     int out;              /* buf[out%BUFF_SIZE] is the first full slot */
     sem_t full;           /* keep track of the number of full spots */
+    // sem_t full = sem_open("full", O_CREAT);           /* keep track of the number of full spots */
+
     sem_t empty;          /* keep track of the number of empty spots */
+    // sem_t empty = sem_open("empty", O_CREAT);           /* keep track of the number of full spots */
 
     // use correct type here
     pthread_mutex_t mutex;          /* enforce mutual exclusion to shared data */
@@ -36,7 +39,7 @@ sbuf_t shared;
 
 void *Producer(void *arg)
 {
-    int i, item, index, currentIn;
+    int i, item, index, currentIn, sem_value, getResult;
 
     index = (int)arg;
 
@@ -50,12 +53,16 @@ void *Producer(void *arg)
         /* Prepare to write item to buf */
 
         /* If there are no empty slots, wait */
-        sem_wait(&shared.empty);
+        // sem_wait(&shared.empty);
+        sem_wait(shared.empty);
         /* If another thread uses the buffer, wait */
         pthread_mutex_lock(&shared.mutex);
         shared.buf[shared.in] = item;
         shared.in = (shared.in+1)%BUFF_SIZE;
         printf("[P%d] Producing %d in Slot-> %d...\n", index, item, shared.in - 1);
+        getResult = sem_getvalue(shared.empty, &sem_value);
+        printf("Result of GetValue(empty): %d \n", getResult);
+        printf("Status of Sem EMPTY: %d \n", sem_value);
         fflush(stdout);
         /* Release the buffer */
         pthread_mutex_unlock(&shared.mutex);
@@ -95,21 +102,30 @@ void *Consumer(void *arg)
 int main()
 {
     pthread_t idP, idC;
-    int index;
+    int index, semValue;
+    sem_t s;
+
+    // shared.full = sem_open("full", O_CREAT);           /* keep track of the number of full spots */
+    // shared.empty = sem_open("empty", O_CREAT);           /* keep track of the number of full spots */
 
     sem_init(&shared.full, 0, 0);
     sem_init(&shared.empty, 0, BUFF_SIZE);
+    sem_init(s, 0, 10);
+    int res = sem_getvalue(&s, &semValue);
+    printf("Result of GetValue(empty): %d \n", res);
+    printf("value of empty: %d \n", semValue);
+
     pthread_mutex_init(&shared.mutex, NULL);
-    for (index = 0; index < NP; index++)
-    {
-        /* Create a new producer */
-        pthread_create(&idP, NULL, Producer, (void*)index);
-    }
+    // for (index = 0; index < NP; index++)
+    // {
+    //      Create a new producer 
+    //     pthread_create(&idP, NULL, Producer, (void*)index);
+    // }
     /*create a new Consumer*/
-    for(index=0; index<NC; index++)
-    {
-        pthread_create(&idC, NULL, Consumer, (void*)index);
-    }
+    // for(index=0; index<NC; index++)
+    // {
+    //     pthread_create(&idC, NULL, Consumer, (void*)index);
+    // }
 
 
 
