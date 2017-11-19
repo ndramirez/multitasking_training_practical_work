@@ -50,7 +50,7 @@ void *Producer(void *arg)
         shared.shared_memory[shared.in] = item;
         currentIn = shared.in;
         shared.in = (shared.in+1)%BUFF_SIZE;
-        printf("[P%d] Producing %d in Slot-> %d...\n", index, item.checksum, currentIn);
+        printf("[P%d] Producing item: %d in Slot-> %d...\n", index, item.checksum, currentIn);
         //getResult = sem_getvalue(shared.SL, &sem_value);
         //printf("Status of Sem EMPTY: %d \n", sem_value);
         fflush(stdout);
@@ -61,33 +61,50 @@ void *Producer(void *arg)
 
         /* Interleave  producer and consumer execution */
         if (i % 2 == 1) sleep(1);
+        // sleep(1);
     }
     return NULL;
 }
 
 void *Consumer(void *arg)
 {
-    // int i, item, index;
+    int i, currentOut, cRead = 0;
+    MSG_BLOCK item, *addBlock;
 
-    // index = (int)arg;
-    // for (i=4; i > 0; i--) {
-    //     sem_wait(shared.SO);
-    //     pthread_mutex_lock(shared.SM);
-    //     item=i;
-    //     item=shared.shared_memory[shared.out];
-    //     shared.out = (shared.out+1)%BUFF_SIZE;
-    //     printf("[C%d] Consuming  %d from Slot -> %d...\n", index, item, shared.out - 1);
-    //     //(void)sem_getvalue(shared.SO, &sem_value2);
-    //     //printf("Status of Sem FULL: %d \n", sem_value2);
-    //     fflush(stdout);
-    //     /* Release the buffer */
-    //     pthread_mutex_unlock(shared.SM);
-    //     /* Increment the number of full slots */
-    //     sem_post(shared.SL);
+    for (i=8; i > 0; i--) {
 
-    //     /* Interleave  producer and consumer execution */
-    //     if (i % 2 == 1) sleep(1);
-    // }
+
+        /* If there are no full slots, wait */
+        sem_wait(shared.SO);
+
+        pthread_mutex_lock(&shared.SM);
+
+        item = shared.shared_memory[shared.out];
+        shared.out = (shared.out+1)%BUFF_SIZE;
+        printf("[Additioneur] Consuming item: %d from Slot -> %d...\n", item.checksum, currentOut);
+        //(void)sem_getvalue(shared.SO, &sem_value2);
+        //printf("Status of Sem FULL: %d \n", sem_value2);
+        fflush(stdout);
+        /* Release the buffer */
+        pthread_mutex_unlock(&shared.SM);
+        /* Increment the number of full slots */
+        sem_post(shared.SL);
+
+
+        /* Add inputs */
+        //MessageAddition(addBlock, item);
+
+        /* Diag Out */
+        cRead++;
+        printf("[Control] %d inputs Added, %d inputs Left\n", cRead, BUFF_SIZE - cRead);
+        if (cRead == BUFF_SIZE) {
+            cRead = 0;
+            // MessageReset(addBlock);
+        }
+
+
+        /* Interleave  producer and consumer execution */
+    }
     return NULL;
 }
 
@@ -100,21 +117,21 @@ int main()
     // sem_init(shared.SO, 0, 0);
     // sem_init(shared.SL, 0, BUFF_SIZE);
     printf("Start\n");
-    shared.SO = sem_open("/full", O_CREAT, S_IRUSR | S_IWUSR, 0);           /* keep track of the number of full spots */
-    shared.SL = sem_open("/empty", O_CREAT, S_IRUSR | S_IWUSR, BUFF_SIZE);
+    shared.SO = sem_open("/full", O_CREAT, 0644, 0);           /* keep track of the number of full spots */
+    shared.SL = sem_open("/empty", O_CREAT, 0644, BUFF_SIZE);
     pthread_mutex_init(&shared.SM, NULL);
 
     /* Create NP producers  */
-    for (index = 0; index < NP; index++)
-    {
+    // for (index = 0; index < NP; index++)
+    // {
         pthread_create(&idP, NULL, Producer, (void*)idP);
-    }
+    // }
     /*Create Consumer*/
     // pthread_create(&idC, NULL, Consumer, (void*)idC);
 
     pthread_exit(NULL);
-    // sem_close(shared.SO);
-    // sem_close(shared.SO);
-    // sem_unlink("/full");
-    // sem_unlink("/empty");
+    sem_close(shared.SO);
+    sem_close(shared.SO);
+    sem_unlink("/full");
+    sem_unlink("/empty");
 }
