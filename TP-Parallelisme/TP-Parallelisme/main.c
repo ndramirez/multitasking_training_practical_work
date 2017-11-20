@@ -27,9 +27,9 @@ typedef struct
     sem_t             *SO;                        /* keep track of the number of full spots */
     sem_t             *SL;                        /* keep track of the number of empty spots */
     pthread_mutex_t   SM;                        /* Semaphore Memoire: enforce mutual exclusion to shared data */
-} sbuf_t;
+} SHARED_INFO;
 
-sbuf_t shared;
+SHARED_INFO shared;
 
 void *Producer(void *arg)
 {
@@ -39,61 +39,80 @@ void *Producer(void *arg)
     for (i=0; i < 4; i++)
     {
 
+        /* Simulation time */
         /* Produce a new item */
-        currentIn = shared.in;
         MessageFill(&item, idP); // fill the correspondent item
         if((err = MessageDisplay(&item))) continue; // go to next iteration if the ckecksum isn't validated
-        printf("[Producer %d] Producing item in Slot %d of shared memory\n", (int)arg, currentIn);
         fflush(stdout);
 
         /* If there are no empty slots, wait */
         sem_wait(shared.SL);
+
+        /********** Start of Critical Section **********/
         /* If another thread is writing/reading from memory, wait */
         pthread_mutex_lock(&shared.SM);
+        currentIn = shared.in;
+        printf("[Producer %d] Producing item in Slot %d of shared memory\n", (int)arg, currentIn);
         shared.shared_memory[shared.in] = item;
         shared.in = (shared.in+1)%BUFF_SIZE;
         /* Release the shared memory mutex */
         pthread_mutex_unlock(&shared.SM);
+        /********** End of Critical Section **********/
+
         /* Increment the number of full slots */
         sem_post(shared.SO);
 
         /* go to sleep for 1 second if you want a slower execution */
-        // sleep(1);
+        sleep(1);
     }
-    pthread_exit(0);
+    // pthread_exit(0);
 }
 
 void *Consumer(void *arg)
 {
-    int i, currentOut;
+    int i, currentOut, waitingTime;
     MSG_BLOCK item, addBlock; // new MSG BLOCK to add and resulted MSG BLOCK
 
     /* consume 4 messages of each thread (4 threads) => 16 MSG BLOCKS */
     for (i=0; i < 16; i++) {
-        currentOut = shared.out;
-        printf("[Consumer %d] Consuming item from slot %d in shared memory\n", (int)arg+1, currentOut);
+
+        /*
+         * Simulation of event trigger:
+         * Each iteration it waits for a random time
+         * between 1 and 5 seconds to read.
+         */
+        waitingTime = rand() % 2 + 1;
+        sleep(waitingTime);
+
         fflush(stdout);
         /* If there are no full slots, wait */
         sem_wait(shared.SO);
+
+        /********** Start of Critical Section **********/
         /* If another thread is writing/reading from memory, wait */
         pthread_mutex_lock(&shared.SM);
+        currentOut = shared.out;
+        printf("[Consumer %d] Consuming item from slot %d in shared memory\n", (int)arg+1, currentOut);
         /* consume the item */
         item = shared.shared_memory[shared.out];
         shared.out = (shared.out+1)%BUFF_SIZE;
+        printf("[Control Message] %d inputs Added, %d inputs Left\n", currentOut+1, BUFF_SIZE - (currentOut+1));
+
         /* Release the shared memory mutex */
         pthread_mutex_unlock(&shared.SM);
-        /* Increment the number of full slots */
+        //********** End of Critical Section **********/
+        /* Increment the number of empty slots */
         sem_post(shared.SL);
+
         /* add new item to resulted vector */
         MessageAddition(&addBlock, &item);
         /* if the 4th vector is added, reinitialize */
-        printf("[Control Message] %d inputs Added, %d inputs Left\n", currentOut+1, BUFF_SIZE - (currentOut+1));
         if (currentOut == (BUFF_SIZE-1)) {
             printf("\n[Control Message] ********* 4 vectors added: reinitializing the addition operation *********\n");
             MessageReset(&addBlock);
         }
     }
-    pthread_exit(0);
+    // pthread_exit(0);
 }
 
 int main()
@@ -106,6 +125,10 @@ int main()
     }
     /* 4 producers and 1 consumer */
     int producer_index, consumer_index;
+
+    /*Initializing rand function seed*/
+    srand(time(NULL));
+
     /* Some explanation of the algortithm */
     printf("Each vector produced has 256 element between 1 and 100\n");
     fflush(stdout);
