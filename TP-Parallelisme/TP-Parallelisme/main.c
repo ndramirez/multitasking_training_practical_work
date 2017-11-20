@@ -129,7 +129,7 @@ int main()
     /*Create Consumer*/
     // pthread_create(&idC, NULL, Consumer, (void*)idC);
 
-    pthread_exit(NULL);
+    (void)pthread_join(idP, NULL);
     sem_close(shared.SO);
     sem_close(shared.SO);
     sem_unlink("/full");
