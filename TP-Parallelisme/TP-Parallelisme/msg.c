@@ -22,6 +22,8 @@ void MessageFill(volatile MSG_BLOCK* mBlock, pthread_t threadId){
 /**
 * Display the message content
 * @param mBlock the message pointer
+* @return 1 if the checksum hasn't been validated
+* @return 0 if the checksum has been validated
 */
 int MessageDisplay(volatile MSG_BLOCK* mBlock){
 	DWORD i, tcheck=0;
@@ -37,16 +39,25 @@ int MessageDisplay(volatile MSG_BLOCK* mBlock){
 	}
 }
 
+/**
+* Add an input to the result block
+* @param addBlock the result block
+* @param mBlock the item to add
+*/
 void MessageAddition(volatile MSG_BLOCK* addBlock, volatile MSG_BLOCK* mBlock){
 	DWORD i;
-	printf("\n\tcurrent element %d in addition result is %d\n", followed_element, addBlock->mData[4]);
-	printf("\telement %d to add in the addition result is %d\n", followed_element, mBlock->mData[4]);
+	printf("\n\tcurrent element %d in addition result is %d\n", followed_element, addBlock->mData[followed_element]);
+	printf("\telement %d to add in the addition result is %d\n", followed_element, mBlock->mData[followed_element]);
 	for(i = 0; i < DATA_SIZE; i++){
 		addBlock->mData[i] += mBlock->mData[i];
 	}
-	printf("\tnew element %d is %d\n\n", followed_element, addBlock->mData[4]);
+	printf("\tnew element %d is %d\n\n", followed_element, addBlock->mData[followed_element]);
 }
 
+/**
+* Reset result block
+* @param addBlock the resulted msg blocked to reset
+*/
 void MessageReset(volatile MSG_BLOCK* addBlock){
 	DWORD i;
 	for(i = 0; i < DATA_SIZE; i++){

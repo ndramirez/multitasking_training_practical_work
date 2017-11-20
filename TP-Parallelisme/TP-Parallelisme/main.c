@@ -39,7 +39,7 @@ void *Producer(void *arg)
     for (i=0; i < 4; i++)
     {
 
-        /* Produce item */
+        /* Produce a new item */
         currentIn = shared.in;
         MessageFill(&item, idP); // fill the correspondent item
         if((err = MessageDisplay(&item))) continue; // go to next iteration if the ckecksum isn't validated
@@ -52,71 +52,61 @@ void *Producer(void *arg)
         pthread_mutex_lock(&shared.SM);
         shared.shared_memory[shared.in] = item;
         shared.in = (shared.in+1)%BUFF_SIZE;
-        /* Release the buffer */
+        /* Release the shared memory mutex */
         pthread_mutex_unlock(&shared.SM);
         /* Increment the number of full slots */
         sem_post(shared.SO);
 
-        /* Interleave  producer and consumer execution */
-        if (i % 2 == 1) sleep(1);
+        /* go to sleep for 1 second if you want a slower execution */
         // sleep(1);
     }
     pthread_exit(0);
-    //return NULL;
 }
 
 void *Consumer(void *arg)
 {
     int i, currentOut;
-    MSG_BLOCK item, addBlock;
+    MSG_BLOCK item, addBlock; // new MSG BLOCK to add and resulted MSG BLOCK
 
+    /* consume 4 messages of each thread (4 threads) => 16 MSG BLOCKS */
     for (i=0; i < 16; i++) {
+        currentOut = shared.out;
+        printf("[Consumer %d] Consuming item from slot %d in shared memory\n", (int)arg+1, currentOut);
+        fflush(stdout);
         /* If there are no full slots, wait */
         sem_wait(shared.SO);
-
+        /* If another thread is writing/reading from memory, wait */
         pthread_mutex_lock(&shared.SM);
-
-        currentOut = shared.out;
+        /* consume the item */
         item = shared.shared_memory[shared.out];
         shared.out = (shared.out+1)%BUFF_SIZE;
-        printf("[Consumer %d] Consuming item from slot %d in shared memory\n", (int)arg, currentOut);
-        fflush(stdout);
-        /* Release the buffer */
+        /* Release the shared memory mutex */
         pthread_mutex_unlock(&shared.SM);
         /* Increment the number of full slots */
         sem_post(shared.SL);
-
-
-        /* Add inputs */
+        /* add new item to resulted vector */
         MessageAddition(&addBlock, &item);
-
-        /* Diag Out */
+        /* if the 4th vector is added, reinitialize */
         printf("[Control Message] %d inputs Added, %d inputs Left\n", currentOut+1, BUFF_SIZE - (currentOut+1));
         if (currentOut == (BUFF_SIZE-1)) {
             printf("\n[Control Message] ********* 4 vectors added: reinitializing the addition operation *********\n");
             MessageReset(&addBlock);
         }
-
-
-        /* Interleave  producer and consumer execution */
     }
     pthread_exit(0);
-    //return NULL;
 }
 
 int main()
-{
+{   /* unlink named semaphores if they were not well closed in the last execution */
     if(sem_unlink("/full")){
-      printf("semaphore S.O. wasn't linked\n");
+      printf("semaphore S.O. wasn't linked\n"); // last execution was O.K.
     }
     if(sem_unlink("/empty")){
-     printf("semaphore S.L. wasn't linked\n\n");
+     printf("semaphore S.L. wasn't linked\n\n"); // last execution was O.K.
     }
+    /* 4 producers and 1 consumer */
     int producer_index, consumer_index;
-
-    /*Using unnamed semaphores*/
-    // sem_init(shared.SO, 0, 0);
-    // sem_init(shared.SL, 0, BUFF_SIZE);
+    /* Some explanation of the algortithm */
     printf("Each vector produced has 256 element between 1 and 100\n");
     fflush(stdout);
     printf("The resulting vector is a sum (element by element) from vectors produced by each thread [1 - 4]\n");
@@ -125,30 +115,35 @@ int main()
     fflush(stdout);
     printf("The user can follow an specific element in the resulting vector\n");
     fflush(stdout);
-    printf("\nWhich vector element do you want to follow its value ? [1 - 255]\n");
+    /* choose the element that the user can follow during the execution */
+    printf("\nWhich vector element do you want to follow its value ? [0 - 255]\n");
     fflush(stdout);
     scanf("%d", &followed_element);
+    /* start the execution */
     printf("Start\n\n");
     fflush(stdout);
-    shared.SO = sem_open("/full", O_CREAT, 0644, 0);           /* keep track of the number of full spots */
-    shared.SL = sem_open("/empty", O_CREAT, 0644, BUFF_SIZE);
-    pthread_mutex_init(&shared.SM, NULL);
+    shared.SO = sem_open("/full", O_CREAT, 0644, 0); /* keep track of the number of full spots */
+    shared.SL = sem_open("/empty", O_CREAT, 0644, BUFF_SIZE); /* keep track of the number of empty spots */
+    pthread_mutex_init(&shared.SM, NULL); /* memory access (shared resource) */
 
     /* Create NP producers  */
     for (producer_index = 0; producer_index < NP; producer_index++){
       pthread_create(&idP, NULL, Producer, (void*)producer_index);
     }
-    /*Create Consumer*/
-    consumer_index = 1;
-    pthread_create(&idC, NULL, Consumer, (void*)consumer_index);
 
-    //pthread_exit(NULL);
+    /* Create NC Consumer */
+    for (consumer_index = 0; consumer_index < NC; consumer_index++){
+      pthread_create(&idC, NULL, Consumer, (void*)consumer_index);
+    }
+
+    /* wait to threads to complet */
     (void)pthread_join(idP, NULL);
     (void)pthread_join(idC, NULL);
+    /* after complete thread execution, close and unlink them */
     sem_close(shared.SO);
     sem_close(shared.SL);
     sem_unlink("/full");
     sem_unlink("/empty");
-    //pthread_exit(NULL);
+
     return(0);
 }
