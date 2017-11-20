@@ -3,10 +3,12 @@
 
 //Message data size
 #define DATA_SIZE 256
-#define DWORD	unsigned int
+#define DWORD unsigned int
 
 //producer and consumer count storage
 volatile DWORD consumeCount, produceCount;
+extern unsigned int followed_element;
+pthread_t idP, idC;
 
 //message type definition
 typedef struct MSG_BLOCK_TAG
@@ -27,19 +29,20 @@ void MessageFill(volatile MSG_BLOCK* mBlock, pthread_t threadId);
 /**
 * Display the message content
 * @param mBlock the message pointer
+* @return 1 if the checksum hasn't been validated
+* @return 0 if the checksum has been validated
 */
-void MessageDisplay(volatile MSG_BLOCK* mBlock);
+int MessageDisplay(volatile MSG_BLOCK* mBlock);
 
 /**
 * Add an input to the result block
 * @param addBlock the result block
-* @param mBlock the item to be added
+* @param mBlock the item to add
 */
-void MessageAddition(volatile MSG_BLOCK* addBlock, volatile MSG_BLOCK mBlock);
+void MessageAddition(volatile MSG_BLOCK* addBlock, volatile MSG_BLOCK* mBlock);
 
 /**
 * Reset result block
-* @param addBlock the result block
-* @param mBlock the item to be added
+* @param addBlock the resulted msg blocked to reset
 */
 void MessageReset(volatile MSG_BLOCK* addBlock);
