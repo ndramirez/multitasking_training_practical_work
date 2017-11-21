@@ -1,0 +1,6 @@
+On a conçu un modèle où l’écriture (ou lecture si additionneur) dans la mémoire partagée et l’incrémentation des compteurs étaient ensemble dans la section critique. Alors, on a changé la manière d’accéder aux compteurs en sortant leurs accès de la section critique et en les modifiant tout après avec les instructions fournies par le compilateur GCC.
+Par conséquent, après l’écriture faite par un thread producteur, on incrément la variable produceCount de la façon suivante: 
+__sync_fetch_and_add (&produceCount, 1);
+
+Et pareillement pour la lecture faite par l’additionneur, juste après avoir pris la donnée et liberé le sémaphore de la mémoire, on fait:
+__sync_fetch_and_add (&consumeCount, 1);
